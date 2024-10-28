@@ -5,7 +5,7 @@ library(dplyr)   # For data manipulation
 library(stringr) # For padding sequences
 
 # Set the working directory holding the wide version shapefile in the correct spatial reference system
-wd <- "\\\\s-fre-nas1\\Data$\\cedge\\Historical Pesticide Project\\NS_NL_historic_pesticides\\RawData\\"
+wd <- "\\\\s-fre-nas1\\Data$\\cedge\\Historical_Pesticide_Project\\NS_NL_historic_pesticides\\RawData\\"
 setwd(wd)  # Set the working directory
 
 # Define the shapefile path
@@ -41,7 +41,7 @@ csv_data <- shapefile_data_unique %>%
   ) %>%
   select(app_id, year, insect, act_ing, rate, vol_Lha, form_type, tank_mix, brand)
 
-# Write out a CSV file with selected columns (problem here, columns removed so not available to write to csv?)
+# Write out a CSV file with selected columns (and create a pivot?)
 csv_data <- shapefile_data_unique %>%
   select(app_id, year, insect, act_ing, rate, vol_Lha, form_type, tank_mix, brand)  # Replace with the actual columns to export
 
