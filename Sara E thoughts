@@ -1,0 +1,149 @@
+# October 31, 2024
+# Sara Edwards Edits, Thanks Sara, this was above and beyond.
+
+# Set up ------------------------------------------------------------------
+
+library(tidyverse)   # Load 'tidyverse' and you get all the tidyverse packates(dplyr, furrr, stringr, etc.)
+library(sf)      
+library(mapview)
+library(janitor)
+
+# read in shape file (original data frame = 'df'): 
+
+df <- st_read("\\\\s-fre-nas1\\Data$\\cedge\\Historical_Pesticide_Project\\NS_NL_historic_pesticides\\RawData\\NL_NS_historic_pesticid_Project.shp")
+
+# Look over data:
+
+names(df)
+head(df)
+str(df)
+
+unique(df$year)
+unique(df$province)
+unique(df$insect_1)
+
+
+
+# look at the shape files (helps me get familiar with the data)
+
+mapview(df, zcol = 'year')
+
+df |> 
+   mutate(year_f = as.factor(year)) |> 
+  mapview(zcol = 'year_f', burst = T, layer.name = 'Year', hide = T, legend = F)
+
+# some columns contain no data (vol and rate have no NA values): 
+
+unique(df$block_4)
+unique(df$form_type4)
+unique(df$brand_4)
+unique(df$insect_4)
+
+unique(df$vol_Lha4)
+unique(df$rate_4)
+
+
+# no insect listed, but volume and rate listed for the 4th application (note for later)
+filter(df, vol_Lha4 > 0)
+
+# Organize data -----------------------------------------------------------
+
+
+
+# Create unique identifier for each block/province/year combination 
+# note 'block_1' has the block id, is repeated in 'block_2' &/or 'block_3' if it was treated multiple times (the # remains the same)  
+
+# creating a unique ID doesn't seem to be necessary but I'll leave the code in 
+
+df <- df |> 
+  mutate(unique_id = paste(year, province, block_1, sep = "_")) |> 
+  select( -block_2, -block_3, -block_4)
+
+
+# Pivot data to long format -----------------------------------------------------------
+
+# Pivot can be a pain for multiple columns of data 
+
+# Step 1: create a row of data for each "insect" 1:4
+# this will give each block 4 rows 
+
+# step 2: pull associated data per insect (i.e. insect_1, goes with 'act_ing_1', rate_1, vol_1, etc.)
+
+
+df.long <- df |> 
+  pivot_longer(cols = starts_with("insect_"),
+               values_to = "insect")|>
+  
+  mutate(app_no = case_when(name == "insect_1" ~ 1,  # keep the order of the applications (not sure if this matters)
+                            name == "insect_2" ~ 2,
+                            name == "insect_3" ~ 3,
+                            name == "insect_4" ~ 4),
+         
+         acting = case_when(name == "insect_1" ~ act_ing_1,
+                            name == "insect_2" ~ act_ing_2,
+                            name == "insect_3" ~ act_ing_3,
+                            name == "insect_4" ~ act_ing_4),
+         
+         rate = case_when(name == "insect_1" ~ rate_1,
+                          name == "insect_2" ~ rate_2,
+                          name == "insect_3" ~ rate_3,
+                          name == "insect_4" ~ rate_4),
+         
+         vol_per_ha = case_when(name == "insect_1" ~ vol_Lha1,
+                                name == "insect_2" ~ vol_Lha2,
+                                name == "insect_3" ~ vol_Lha3,
+                                name == "insect_4" ~ vol_Lha4),
+         
+         formula = case_when(name == "insect_1" ~ form_type1,
+                             name == "insect_2" ~ form_type2,
+                             name == "insect_3" ~ form_type3,
+                             name == "insect_4" ~ form_type4),
+         
+         tank = case_when(name == "insect_1" ~ tank_mix_1,
+                          name == "insect_2" ~ tank_mix_2,
+                          name == "insect_3" ~ tank_mix_3,
+                          name == "insect_4" ~ tank_mix_4),
+         
+         brand = case_when(name == "insect_1" ~ brand_1,
+                           name == "insect_2" ~ brand_2,
+                           name == "insect_3" ~ brand_3,
+                           name == "insect_4" ~ brand_4)) |>
+  
+  select(- num_apps, -starts_with(c("insect_", "act_ing", "vol_L", "form_", "tank_", "brand_", "rate_")))
+
+# take a look at the data file so far:
+view(df.long)
+
+# Each polygon was split into 4 rows (insect 1-4) 
+# We need to remove unnecessary rows (instances where no treatments were applied)
+
+# reminder - see line 47: 
+check_na_insect <- df.long |> 
+  filter(is.na(insect) )
+
+check_na_insect |> 
+  filter(rate > 0)
+
+
+# can't filter based on is.na(insect) or we will lose these 4 lines data
+
+# give "unknown' value to insect where treatment was applied, then filter based on is.na(insect)
+
+df.long.final <- df.long |> 
+ # mutate(insect_name = if_else(is.na(insect) & rate > 0, "unknown", insect)) |> 
+  filter(!is.na(insect))
+
+# Clean up -----------------------------------------------------------
+
+# relocate columns & clean names name
+names(df.long.final)
+
+df.clean <- df.long.final |> 
+  select(year, province, block_1, app_no, insect, map_nam, app_type,
+         aircraft, guidance, app_sys, acting, rate, vol_per_ha, formula, tank,
+         brand, reference, Shape_Leng, Shape_Area, geometry) |> 
+  rename(block = block_1) |> 
+  clean_names()
+
+
+df.clean
