@@ -37,9 +37,17 @@ shapefile_data_expanded <- shapefile_data_unique %>%
   unnest(app_id) %>%  # Expands each `app_area` to multiple rows based on `num_apps`
   ungroup()
 
-# code works to HERE, shapefile_data_expand looks right!
 
 
+# Isolate only the columns we need for pivoting (to prevent unintended duplication)
+# Include only the "app_id", "app_area" and fields for pivoting
+shapefile_data_expanded <- shapefile_data_expanded %>%
+  select(app_id, app_area, year, starts_with("insect"), starts_with("act_ing"), 
+         starts_with("rate"), starts_with("vol_Lha"), starts_with("form_type"),
+         starts_with("tank_mix"), starts_with("brand"))
+
+# Error generated in the csv development in pivot_longer, can't find specific fields, "vol_Lha" and "form_type"
+#remove those columns from the operation and the file works.
 
 # Use `pivot_longer()` to move specified columns to long format
 csv_data <- shapefile_data_expanded %>%
@@ -58,4 +66,8 @@ write.csv(csv_data, "attribute_data_long.csv", row.names = FALSE)
 
 # View the final long-format csv
 #print(csv_data)
+
+
+
+
 
