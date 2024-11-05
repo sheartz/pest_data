@@ -47,10 +47,9 @@ csv_data <- shapefile_data_expanded %>%
     cols = starts_with(c("insect", "act_ing", "rate", "vol_Lha", "form_type", "tank_mix", "brand")),
     names_to = c(".value", "group"),
     names_pattern = "(.*)_(\\d+)"
-  ) %>%
+  ) #%>%
   # Select the columns for the data write
   select(app_id, app_area, year, insect, act_ing, rate, vol_Lha, form_type, tank_mix, brand)
-
 
 
 # Write the transformed data to a CSV file
@@ -58,4 +57,24 @@ write.csv(csv_data, "attribute_data_long.csv", row.names = FALSE)
 
 # View the final long-format csv
 #print(csv_data)
+
+
+
+#Chris trying a different approach.
+#I create the long format first, then create the app_ID field
+
+names(shapefile_data_unique)
+
+ce_dat <- shapefile_data_unique %>%
+  rename(vol_Lha_1 = vol_Lha1, vol_Lha_2 = vol_Lha2, vol_Lha_3 = vol_Lha3, vol_Lha_4 = vol_Lha4, #renaming the troublesome columns to match the format of the columns that work
+         form_type_1 = form_type1, form_type_2 = form_type2, form_type_3 = form_type3, form_type_4 = form_type4) %>%
+  pivot_longer(
+    cols = starts_with(c("insect", "act_ing", "rate", "vol_Lha", "form_type", "tank_mix", "brand")),
+    names_to = c(".value", "group"),
+    names_pattern = "(.*)_(\\d+)") %>%
+  unite("app_id", app_area, group, remove=FALSE) %>%
+# Select the columns for the data write
+select(app_id, app_area, year, insect, act_ing, rate, vol_Lha, form_type, tank_mix, brand)
+
+ 
 
